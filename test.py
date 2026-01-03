@@ -72,20 +72,6 @@ class PiecewiseLinearCDFAlias(SamplingStrategy):
         return self.xs[i] + u * (self.xs[i + 1] - self.xs[i])
 
 # ==========================
-# PIECEWISE SU INCREMENTI EQUIPROBABILISTICI (O(1))
-# ==========================
-class EquiIncrementCDFSampling(SamplingStrategy):
-    def __init__(self, xs):
-        self.xs = xs
-        self.n = len(xs) - 1
-
-    def sample(self):
-        u = random.random()
-        i = int(u * self.n)
-        frac = (u - i / self.n) * self.n
-        return self.xs[i] + frac * (self.xs[i + 1] - self.xs[i])
-
-# ==========================
 # CREAZIONE CDF GAUSSIANA PIECEWISE
 # ==========================
 def gaussian_pdf(x, mu=0, sigma=1):
@@ -114,12 +100,10 @@ if __name__ == "__main__":
     # inizializzazione sampler
     sampler_linear = PiecewiseLinearCDFLinearSearch(xs, cdf)
     sampler_alias = PiecewiseLinearCDFAlias(xs, cdf)
-    sampler_equi = EquiIncrementCDFSampling(xs)
 
     n_samples = 10000
     samples_linear = [sampler_linear.sample() for _ in range(n_samples)]
     samples_alias = [sampler_alias.sample() for _ in range(n_samples)]
-    samples_equi = [sampler_equi.sample() for _ in range(n_samples)]
 
     # PDF gaussiana reale
     pdf_real = [gaussian_pdf(x) for x in xs]
@@ -130,8 +114,16 @@ if __name__ == "__main__":
     # PLOT
     plt.figure(figsize=(12, 6))
     plt.hist(samples_linear, bins=50, density=True, alpha=0.5, label="Linear Search")
+    plt.plot(xs, pdf_real_norm, 'k--', label="Gaussian PDF")
+    plt.title("Sampling strategies comparison for Gaussian")
+    plt.xlabel("x")
+    plt.ylabel("Density")
+    plt.legend()
+    plt.show()
+
+    # PLOT
+    plt.figure(figsize=(12, 6))
     plt.hist(samples_alias, bins=50, density=True, alpha=0.5, label="Alias Method")
-    plt.hist(samples_equi, bins=50, density=True, alpha=0.5, label="Equi-Increment")
     plt.plot(xs, pdf_real_norm, 'k--', label="Gaussian PDF")
     plt.title("Sampling strategies comparison for Gaussian")
     plt.xlabel("x")
