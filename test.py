@@ -2,6 +2,8 @@ import random
 import math
 import matplotlib.pyplot as plt
 from abc import ABC, abstractmethod
+import time
+
 
 # ==========================
 # INTERFACCIA STRATEGY
@@ -94,7 +96,8 @@ def gaussian_cdf_piecewise(xs):
 # ==========================
 if __name__ == "__main__":
     # dominio della gaussiana
-    xs = [i * 0.1 for i in range(-50, 51)]  # da -5 a 5
+    n_pieces = 1000
+    xs = [-5 + 10 * i / n_pieces for i in range(n_pieces + 1)]
     cdf = gaussian_cdf_piecewise(xs)
 
     # inizializzazione sampler
