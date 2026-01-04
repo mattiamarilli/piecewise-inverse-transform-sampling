@@ -1,31 +1,33 @@
-import time
 import matplotlib.pyplot as plt
-
+from distributions.exponential import exponential_pdf, exponential_cdf_piecewise, compute_equispaced_points_exp
 from context.sampler_context import SamplerContext
-from distributions.gaussian import gaussian_pdf, gaussian_cdf_piecewise
 
-if __name__ == "__main__":
-    n_pieces = 100
-    xs = [-5 + 10 * i / n_pieces for i in range(n_pieces + 1)]
-    cdf = gaussian_cdf_piecewise(xs)
+# Dominio per Linear Search / Alias Method
+n_pieces = 50
+xs = [i*0.2 for i in range(n_pieces+1)]
+cdf = exponential_cdf_piecewise(xs, lambd=1.0)
+n_samples = 100_000
 
-    sampler = SamplerContext(xs, cdf)
+# Linear Search
+sampler_linear = SamplerContext(xs, cdf, linear_threshold=100)
+samples_linear = [sampler_linear.sample() for _ in range(n_samples)]
 
-    print("Sampling strategy:", sampler.read_strategy())
+# Alias Method
+sampler_alias = SamplerContext(xs, cdf, linear_threshold=0)
+samples_alias = [sampler_alias.sample() for _ in range(n_samples)]
 
-    n_samples = 1_000_000
+# Piecewise Equi-Spaced
+xs_equi = compute_equispaced_points_exp(lambd=1.0, n_points=50)
+sampler_equi = SamplerContext(xs, cdf, use_equispaced=True, n_equi=50)
+sampler_equi.xs_equi = xs_equi  # passiamo i punti analitici
+samples_equi = [sampler_equi.sample() for _ in range(n_samples)]
 
-    start = time.time()
-    samples = [sampler.sample() for _ in range(n_samples)]
-    end = time.time()
+# Plot
+plt.hist(samples_linear, bins=50, density=True, alpha=0.5, label="Linear Search")
+plt.hist(samples_alias, bins=50, density=True, alpha=0.5, label="Alias Method")
+plt.hist(samples_equi, bins=50, density=True, alpha=0.5, label="Piecewise Equi-Spaced")
 
-    print(f"Tempo sampling: {end - start:.4f}s")
-    print(f"Strategia usata: {sampler.strategy.__class__.__name__}")
-
-    pdf_real = [gaussian_pdf(x) for x in xs]
-
-    plt.figure(figsize=(12, 6))
-    plt.hist(samples, bins=50, density=True, alpha=0.5, label="Samples")
-    plt.plot(xs, pdf_real, "k--", label="Gaussian PDF")
-    plt.legend()
-    plt.show()
+xs_plot = [i*0.1 for i in range(101)]
+plt.plot(xs_plot, [exponential_pdf(x) for x in xs_plot], "k--", label="Exponential PDF")
+plt.legend()
+plt.show()
