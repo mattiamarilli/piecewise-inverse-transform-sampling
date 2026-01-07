@@ -3,10 +3,11 @@ from .base import SamplingStrategy
 from utils.alias_table import AliasTable
 
 class PiecewiseLinearCDFAlias(SamplingStrategy):
+    tag = "PiecewiseLinearCDFAlias"
+
     def __init__(self, xs, cdf):
         self.xs = xs
         self.cdf = cdf
-        self.tag = "PiecewiseLinearCDFAlias"
 
         segment_probs = [cdf[i + 1] - cdf[i] for i in range(len(cdf) - 1)]
         self.alias = AliasTable(segment_probs)

@@ -2,10 +2,11 @@ import random
 from .base import SamplingStrategy
 
 class PiecewiseLinearCDFLinearSearch(SamplingStrategy):
+    tag = "PiecewiseLinearCDFLinearSearch"
+
     def __init__(self, xs, cdf):
         self.xs = xs
         self.cdf = cdf
-        self.tag = "PiecewiseLinearCDFLinearSearch"
 
     def sample(self):
         u = random.random()
