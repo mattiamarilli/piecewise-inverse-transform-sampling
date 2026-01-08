@@ -25,4 +25,6 @@ def compute_equispaced_points_exp(lambd=1.0, n_points=100, x_max=10.0):
         x = -math.log(1-u)/lambd
         xs_equi.append(x)
     xs_equi.append(x_max)  # chiude l'ultimo intervallo
+    return xs_equi
+
 

@@ -1,33 +1,62 @@
+import time
 import matplotlib.pyplot as plt
-from distributions.exponential import exponential_pdf, exponential_cdf_piecewise, compute_equispaced_points_exp
-from context.sampler_context import SamplerContext
 
-# Dominio per Linear Search / Alias Method
-n_pieces = 50
-xs = [i*0.2 for i in range(n_pieces+1)]
+from distributions.exponential import (
+    exponential_pdf,
+    exponential_cdf_piecewise,
+    compute_equispaced_points_exp
+)
+
+from strategies.linear_search import PiecewiseLinearCDFLinearSearch
+from strategies.alias_method import PiecewiseLinearCDFAlias
+from strategies.equispaced import PiecewiseEquispacedCDF
+
+
+# Dominio
+n_pieces = 10000
+xs = [i * 0.2 for i in range(n_pieces + 1)]
 cdf = exponential_cdf_piecewise(xs, lambd=1.0)
-n_samples = 100_000
+n_samples = 1_000_000
 
-# Linear Search
-sampler_linear = SamplerContext(xs, cdf, linear_threshold=100)
+
+# ---------- Linear Search ----------
+sampler_linear = PiecewiseLinearCDFLinearSearch(xs, cdf)
+
+start = time.perf_counter()
 samples_linear = [sampler_linear.sample() for _ in range(n_samples)]
+end = time.perf_counter()
 
-# Alias Method
-sampler_alias = SamplerContext(xs, cdf, linear_threshold=0)
+linear_time = end - start
+print(f"Linear Search time: {linear_time:.4f} s")
+
+
+# ---------- Alias Method ----------
+sampler_alias = PiecewiseLinearCDFAlias(xs, cdf)
+
+start = time.perf_counter()
 samples_alias = [sampler_alias.sample() for _ in range(n_samples)]
+end = time.perf_counter()
 
-# Piecewise Equi-Spaced
+alias_time = end - start
+print(f"Alias Method time: {alias_time:.4f} s")
+
+
+# ---------- Piecewise Equi-Spaced ----------
 xs_equi = compute_equispaced_points_exp(lambd=1.0, n_points=50)
-sampler_equi = SamplerContext(xs, cdf, use_equispaced=True, n_equi=50)
-sampler_equi.xs_equi = xs_equi  # passiamo i punti analitici
+sampler_equi = PiecewiseEquispacedCDF(xs_equi)
+start = time.perf_counter()
 samples_equi = [sampler_equi.sample() for _ in range(n_samples)]
+end = time.perf_counter()
+print(f"Piecewise Equi-Spaced: {alias_time:.4f} s")
 
-# Plot
-plt.hist(samples_linear, bins=50, density=True, alpha=0.5, label="Linear Search")
-plt.hist(samples_alias, bins=50, density=True, alpha=0.5, label="Alias Method")
-plt.hist(samples_equi, bins=50, density=True, alpha=0.5, label="Piecewise Equi-Spaced")
 
-xs_plot = [i*0.1 for i in range(101)]
+
+# ---------- Plot ----------
+plt.hist(samples_linear, bins=500, density=True, alpha=0.5, label="Linear Search")
+plt.hist(samples_alias, bins=500, density=True, alpha=0.5, label="Alias Method")
+plt.hist(samples_equi, bins=500, density=True, alpha=0.5, label="Piecewise Equi-Spaced")
+
+xs_plot = [i * 0.1 for i in range(101)]
 plt.plot(xs_plot, [exponential_pdf(x) for x in xs_plot], "k--", label="Exponential PDF")
 plt.legend()
 plt.show()
