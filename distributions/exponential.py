@@ -11,7 +11,6 @@ def exponential_cdf(x, lambd=1.0):
     return 1 - math.exp(-lambd * x)
 
 def exponential_cdf_piecewise(xs, lambd=1.0):
-    """CDF numerica per Linear Search / Alias Method"""
     return [exponential_cdf(x, lambd) for x in xs]
 
 def compute_equispaced_points_exp(lambd=1.0, n_points=100, x_max=10.0):
