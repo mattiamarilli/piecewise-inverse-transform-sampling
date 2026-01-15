@@ -10,7 +10,7 @@ if __name__ == "__main__":
     # Setup Gaussian distribution
     # -----------------------------
     # Discretize the x-domain for CDF evaluation
-    n_pieces = 500
+    n_pieces = 50
     xs = [-5 + 10 * i / n_pieces for i in range(n_pieces + 1)]  # From -5 to 5
 
     # Compute a piecewise approximation of the CDF
@@ -62,7 +62,7 @@ if __name__ == "__main__":
     # Plot Linear Search samples
     # -----------------------------
     plt.figure(figsize=(12, 6))
-    plt.hist(samples_linear, bins=500, density=True, alpha=0.7, color='blue', label="Linear Search samples")
+    plt.hist(samples_linear, bins=50, density=True, alpha=0.7, color='blue', label="Linear Search samples")
     plt.plot(xs, pdf_real, "k--", label="Gaussian PDF")
     plt.title("Sampling from Gaussian Distribution (Linear Search)")
     plt.xlabel("x")
@@ -74,7 +74,7 @@ if __name__ == "__main__":
     # Plot Alias Method samples
     # -----------------------------
     plt.figure(figsize=(12, 6))
-    plt.hist(samples_alias, bins=500, density=True, alpha=0.7, color='green', label="Alias Method samples")
+    plt.hist(samples_alias, bins=50, density=True, alpha=0.7, color='green', label="Alias Method samples")
     plt.plot(xs, pdf_real, "k--", label="Gaussian PDF")
     plt.title("Sampling from Gaussian Distribution (Alias Method)")
     plt.xlabel("x")
