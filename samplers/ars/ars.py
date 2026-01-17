@@ -41,7 +41,7 @@ class ARS():
         self.h = self.f(self.x, **self.fargs)
         self.hprime = self.fprima(self.x, **self.fargs)
 
-        #Avoid under/overflow errors. the envelope and pdf are only
+        # Avoid under/overflow errors. the envelope and pdf are only
         # proporitional to the true pdf, so can choose any constant of proportionality.
         self.offset = np.amax(self.h)
         self.h = self.h-self.offset 

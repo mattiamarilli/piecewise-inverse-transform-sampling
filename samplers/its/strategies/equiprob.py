@@ -1,8 +1,8 @@
 import random
-from strategies.base import SamplingStrategy
+from .base import SamplingStrategy
 
 
-class PiecewiseEquispacedCDF(SamplingStrategy):
+class PiecewiseEquiprobCDF(SamplingStrategy):
     """
     Sampling strategy based on a piecewise-linear approximation
     of the inverse CDF.

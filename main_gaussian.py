@@ -3,7 +3,9 @@ import matplotlib.pyplot as plt
 
 from strategies.linear_search import PiecewiseLinearCDFLinearSearch
 from strategies.alias_method import PiecewiseLinearCDFAlias
-from distributions.gaussian import gaussian_pdf, gaussian_cdf_piecewise
+from distributions.gaussian import gaussian_cdf_piecewise
+from scipy.stats import norm
+
 
 if __name__ == "__main__":
     # -----------------------------
@@ -56,7 +58,7 @@ if __name__ == "__main__":
     # Optional plot: compare samples with the true PDF
     # -----------------------------
     # Evaluate the theoretical Gaussian PDF
-    pdf_real = [gaussian_pdf(x) for x in xs]
+    pdf_real = [norm.pdf(x, loc=0, scale=1) for x in xs]
 
     # -----------------------------
     # Plot Linear Search samples

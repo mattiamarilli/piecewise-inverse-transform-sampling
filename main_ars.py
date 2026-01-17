@@ -2,7 +2,7 @@ from __future__ import  division
 import numpy as np
 from matplotlib import pyplot as plt
 
-from  ars import ARS
+from  samplers.ars.ars import ARS
 
 
 ######################################

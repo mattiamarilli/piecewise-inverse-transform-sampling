@@ -1,6 +1,5 @@
 import random
 
-
 class AliasTable:
     """
     Implementation of the Alias Method for efficient discrete sampling.
@@ -74,3 +73,4 @@ class AliasTable:
 
         # Biased coin flip to select between i and its alias
         return i if random.random() < self.prob[i] else self.alias[i]
+

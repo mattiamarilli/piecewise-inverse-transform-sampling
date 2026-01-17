@@ -2,7 +2,6 @@ import random
 from .base import SamplingStrategy
 from utils.alias_table import AliasTable
 
-
 class PiecewiseLinearCDFAlias(SamplingStrategy):
     """
     Sampling strategy based on a piecewise-linear CDF using the Alias Method.
