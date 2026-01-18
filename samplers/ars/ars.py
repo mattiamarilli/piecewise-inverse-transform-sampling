@@ -46,14 +46,26 @@ class ARS():
         self.offset = np.amax(self.h)
         self.h = self.h-self.offset 
 
-        # Derivative at first point in xi must be > 0
-        # Derivative at last point in xi must be < 0
-        if not(self.hprime[0] > 0): 
-            print(self.hprime)          
-            raise IOError('initial anchor points must span mode of PDF')
-        if not(self.hprime[-1] < 0):
-            print(self.hprime) 
-            raise IOError('initial anchor points must span mode of PDF')
+        # 1. Controllo pendenza a SINISTRA (Lower Bound)
+        # Se il limite inferiore è -infinito, la pendenza deve essere positiva per chiudere l'integrale.
+        if self.lb == -np.inf:
+            if not (self.hprime[0] > 0):
+                print(f"Derivata iniziale: {self.hprime[0]}")
+                raise IOError('Per supporti illimitati a sinistra (-inf), la derivata iniziale deve essere positiva.')
+        # Se lb è finito (es. 0.0 per esponenziale), non forziamo hprime[0] > 0.
+
+        # 2. Controllo pendenza a DESTRA (Upper Bound)
+        # Se il limite superiore è +infinito, la pendenza deve essere negativa per chiudere l'integrale.
+        if self.ub == np.inf:
+            if not (self.hprime[-1] < 0):
+                print(f"Derivata finale: {self.hprime[-1]}")
+                raise IOError('Per supporti illimitati a destra (+inf), la derivata finale deve essere negativa.')
+        # Se ub è finito, non forziamo hprime[-1] < 0.
+
+        # 3. Caso speciale: Dominio limitato su entrambi i lati
+        # Se sia lb che ub sono finiti, le derivate possono essere qualunque, l'ARS funzionerà sempre.
+
+        # Se i controlli passano, procedi con l'inizializzazione
         self.insert() 
 
         
@@ -109,7 +121,7 @@ class ARS():
         N = self.h.__len__()
         self.u = self.hprime[[0]+list(range(N))]*(self.z-self.x[[0]+list(range(N))]) + self.h[[0]+list(range(N))]
 
-        self.s = np.hstack([0,np.cumsum(np.diff(np.exp(self.u))/self.hprime)])
+        self.s = np.hstack([0, np.cumsum(np.diff(np.exp(self.u)) / (self.hprime))])
         self.cu = self.s[-1]
 
 

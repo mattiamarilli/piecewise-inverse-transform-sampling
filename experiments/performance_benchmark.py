@@ -2,7 +2,7 @@ import os
 import sys
 import time
 import numpy as np
-from scipy.stats import expon, gamma
+from scipy.stats import gamma
 
 
 # Aggiunge la root del progetto a sys.path per import relativi
@@ -25,8 +25,6 @@ from utils.distributions_utils import (
     beta_log_pdf,
     beta_log_pdf_prime,
     beta_cdf_piecewise,
-    exponential_cdf_piecewise,
-    compute_equispaced_points_exp,
     gamma_log_pdf,
     gamma_log_pdf_prime,
     gamma_cdf_piecewise,
@@ -51,7 +49,7 @@ def build_cdf_grid(dist_name, n_pieces, params):
     Parameters
     ----------
     dist_name : str
-        'gaussian', 'gamma', 'beta', 'kumaraswamy', 'exponential'
+        'gaussian', 'gamma', 'beta', 'kumaraswamy'
     n_pieces : int
         Numero di punti di discretizzazione (pieces)
     params : dict
@@ -94,14 +92,6 @@ def build_cdf_grid(dist_name, n_pieces, params):
         cdf = kumaraswamy_cdf(xs, a, b)
         return xs, cdf
 
-    elif dist_name == "exponential":
-        lambd = params["lambd"]
-        # support [0, upper] con upper = quantile 0.999
-        upper = expon.ppf(0.999, scale=1.0 / lambd)
-        xs = np.linspace(0.0, upper, n_pieces)
-        cdf = exponential_cdf_piecewise(xs, lambd=lambd)
-        return xs, cdf
-
     else:
         raise ValueError(f"Distribuzione non supportata: {dist_name}")
 
@@ -117,7 +107,7 @@ def build_ars_sampler(dist_name, ns, params):
     Parameters
     ----------
     dist_name : str
-        'gaussian', 'gamma', 'beta', 'kumaraswamy', 'exponential'
+        'gaussian', 'gamma', 'beta', 'kumaraswamy'
     ns : int
         Numero massimo di punti di supporto memorizzati (ns in ARS).
     params : dict
@@ -131,11 +121,18 @@ def build_ars_sampler(dist_name, ns, params):
     if dist_name == "gaussian":
         mu = params.get("mu", 0.0)
         sigma = params.get("sigma", 1.0)
-        xi = [-4,1,40]
+        # xi intorno alla moda (mu)
+        xi = [mu - sigma, mu + sigma]
+        lb = -np.inf
+        ub = np.inf
         return ARS(
             f=gaussian_log_pdf,
             fprima=gaussian_log_pdf_prime,
             xi=xi,
+            lb=lb,
+            ub=ub,
+            use_lower=False,
+            ns=ns,
             mu=mu,
             sigma=sigma,
         )
@@ -143,12 +140,23 @@ def build_ars_sampler(dist_name, ns, params):
     elif dist_name == "gamma":
         shape = params["shape"]
         scale = params.get("scale", 1.0)
-        xi = [0.1,1,40]
+        # moda ~ (shape-1)*scale, scegliamo xi intorno ad essa se shape>1
+        if shape > 1:
+            mode = (shape - 1) * scale
+            xi = [mode * 0.5, mode * 1.5]
+        else:
+            # se shape <= 1, moda in 0 (comunque ok ma più tricky)
+            xi = [scale * 1e-4, scale * 0.5, scale * 2.0]
+        lb = 0.0
+        ub = np.inf
         return ARS(
             f=gamma_log_pdf,
             fprima=gamma_log_pdf_prime,
             xi=xi,
-            lb=0,
+            lb=lb,
+            ub=ub,
+            use_lower=False,
+            ns=ns,
             shape=shape,
             scale=scale,
         )
@@ -156,13 +164,28 @@ def build_ars_sampler(dist_name, ns, params):
     elif dist_name == "beta":
         a = params["a"]
         b = params["b"]
-        xi = [0.1, 0.5, 0.9]
+        lb = 0.0
+        ub = 1.0
+        # moda ~ (a-1)/(a+b-2), scegliamo xi attorno
+        if a > 1 and b > 1:
+            eps = 1e-3
+            mode = (a - 1) / (a + b - 2)
+            xi = [
+                max(lb + eps, mode - 3*eps),
+                mode - eps,
+                mode + eps,
+                min(ub - eps, mode + 3*eps)
+            ]
+        else:
+           xi = [0.2, 0.5, 0.8]
         return ARS(
             f=beta_log_pdf,
             fprima=beta_log_pdf_prime,
             xi=xi,
-            lb=0,
-            ub=1,
+            lb=lb,
+            ub=ub,
+            use_lower=False,
+            ns=ns,
             a=a,
             b=b,
         )
@@ -184,33 +207,6 @@ def build_ars_sampler(dist_name, ns, params):
             ns=ns,
             a=a,
             b=b,
-        )
-
-    elif dist_name == "exponential":
-        lambd = params["lambd"]
-        # moda in 0, scegliamo alcuni punti positivi
-        xi = [1.0 / (3 * lambd), 1.0 / lambd, 3.0 / lambd]
-        lb = 0.0
-        ub = np.inf
-
-        def exp_log_pdf(x, lambd=1.0):
-            x = np.asarray(x)
-            # log(lambd) - lambd * x (ignoro normale perché ARS lavora con log-densità a costante additiva)
-            return np.log(lambd) - lambd * x
-
-        def exp_log_pdf_prime(x, lambd=1.0):
-            x = np.asarray(x)
-            return -lambd * np.ones_like(x)
-
-        return ARS(
-            f=exp_log_pdf,
-            fprima=exp_log_pdf_prime,
-            xi=xi,
-            lb=lb,
-            ub=ub,
-            use_lower=False,
-            ns=ns,
-            lambd=lambd,
         )
 
     else:
@@ -256,15 +252,8 @@ def benchmark_its(
             sampler = PiecewiseITS(strategy=strategy)
 
         elif strategy_tag == "equiprob":
-            # equiprobabile: solo per kumaraswamy ed esponenziale come da richiesta
-            if dist_name == "exponential":
-                lambd = params["lambd"]
-                xs_equi = compute_equispaced_points_exp(
-                    lambd=lambd,
-                    n_points=n_pieces,
-                    x_max=10.0,  # o altro upper bound
-                )
-            elif dist_name == "kumaraswamy":
+            # equiprobabile: solo per kumaraswamy
+            if dist_name == "kumaraswamy":
                 a = params["a"]
                 b = params["b"]
                 xs_equi = kumaraswamy_equiprobable_points(a, b, n_points=n_pieces)
@@ -342,12 +331,11 @@ def main():
 
     # Parametri distribuzioni
     dists = {
-        "gaussian": {"mu": 2.0, "sigma": 3.0},
-        "gamma": {"shape": 2.0, "scale": 0.5},
-        "beta": {"a": 1.3, "b": 2.7},
-        #Kumaraswamy log-concava con parametri >1 e densità unimodale
+        "gaussian": {"mu": 0.0, "sigma": 1.0},
+        "gamma": {"shape": 2.0, "scale": 1.0},
+        "beta": {"a": 2.0, "b": 5.0},
+        # Kumaraswamy log-concava con parametri >1 e densità unimodale
         "kumaraswamy": {"a": 3.0, "b": 3.0},
-        "exponential": {"lambd": 1.0},
     }
 
     all_results = []
@@ -378,8 +366,8 @@ def main():
             )
         )
 
-    # ITS - equiprobabile solo per kumaraswamy ed esponenziale
-    for dist_name in ["kumaraswamy", "exponential"]:
+    # ITS - equiprobabile solo per kumaraswamy
+    for dist_name in ["kumaraswamy"]:
         params = dists[dist_name]
         print(f"=== ITS equiprob per {dist_name} ===")
 
@@ -396,9 +384,6 @@ def main():
 
     # ARS per tutte le distribuzioni
     for dist_name, params in dists.items():
-        if dist_name in ["kumaraswamy", "exponential"]:
-             # ARS non implementato per queste due distribuzioni
-             continue
         print(f"=== ARS per {dist_name} ===")
         all_results.extend(
             benchmark_ars(
