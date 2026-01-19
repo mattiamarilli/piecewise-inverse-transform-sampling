@@ -18,6 +18,8 @@ from samplers.its.its import PiecewiseITS
 from samplers.its.strategies.linear_search import PiecewiseLinearCDFLinearSearch
 from samplers.its.strategies.alias_method import PiecewiseLinearCDFAlias
 from samplers.its.strategies.equiprob import PiecewiseEquiprobCDF
+from performance_benchmark import build_cdf_grid
+
 
 # Distribuzioni / utils
 from utils.distributions_utils import (
@@ -70,7 +72,6 @@ def true_cdf(dist, xs, params):
 
 def pdf_metrics(samples, dist, params, n_bins=100):
     samples = np.asarray(samples)
-    ll = np.mean(true_log_pdf(dist, samples, params))
 
     x_min, x_max = samples.min(), samples.max()
     bins = np.linspace(x_min, x_max, n_bins + 1)
@@ -83,7 +84,8 @@ def pdf_metrics(samples, dist, params, n_bins=100):
     M = 0.5 * (P + Q)
     js_div = 0.5 * (entropy(P, M) + entropy(Q, M))
 
-    return {"loglik_mean": ll, "js_divergence": js_div}
+    return {"js_divergence": js_div}
+
 
 # -------------------------------------------------------------------------
 # Metriche CDF-based
@@ -122,8 +124,8 @@ def benchmark_accuracy_its(dist_name, strategy_tag, N_batch_list, n_pieces_list,
     for n_pieces in n_pieces_list:
         print(f"Costruzione strategia con n_pieces={n_pieces}")
         if strategy_tag in ("linear", "alias"):
-            xs = np.linspace(0, 1, n_pieces)
-            cdf = true_cdf(dist_name, xs, params)
+            if strategy_tag in ("linear", "alias"):
+                xs, cdf = build_cdf_grid(dist_name, n_pieces, params)
             if strategy_tag == "linear":
                 strategy = PiecewiseLinearCDFLinearSearch(xs, cdf)
             else:
@@ -215,8 +217,8 @@ def plot_dkw_bands(cdf_data, title="Bande DKW", save_path=None):
 # -------------------------------------------------------------------------
 
 def main():
-    N_batch_list = [10**3, 10**4, 10**5]
-    n_pieces_list = [100, 500, 1000]
+    N_batch_list = [10**6]
+    n_pieces_list = [10,100, 500, 1000]
     ns_list = [20, 50, 100]
 
     dists = {
@@ -246,26 +248,14 @@ def main():
 
     # Stampa CSV
     print("\n=== RISULTATI CSV ===")
-    print("method,dist,N,n_pieces,ns,loglik,js_div,sup_cdf_err,dkw_eps,dkw_ok")
+    print("method,dist,N,n_pieces,ns,js_div,sup_cdf_err,dkw_eps,dkw_ok")
     for r in all_results:
         print(
             f"{r['method']},{r['dist']},{r['N']},"
             f"{r.get('n_pieces','')},{r.get('ns','')},"
-            f"{r['loglik_mean']:.6f},{r['js_divergence']:.6f},"
+            f"{r['js_divergence']:.6f},"
             f"{r['sup_cdf_error']:.6f},{r['dkw_epsilon']:.6f},{r['dkw_covered']}"
         )
-
-    # esempio ITS lineare per Gaussian
-    xs = np.linspace(-4, 4, 1000)  # 4 sigma a destra e sinistra della media
-    cdf = true_cdf("gaussian", xs, {"mu":0,"sigma":1})
-    strategy = PiecewiseLinearCDFLinearSearch(xs, cdf)
-    sampler = PiecewiseITS(strategy)
-
-    samples = sampler.draw(1000)  # campioni
-    cdf_data = cdf_metrics(samples, "gaussian", {"mu":0,"sigma":1})
-    plot_dkw_bands(cdf_data, title="ITS Linear - Gaussian")
-
-
 
 if __name__ == "__main__":
     main()
