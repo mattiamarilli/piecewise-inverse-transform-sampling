@@ -1,25 +1,13 @@
-import os
-import sys
 import numpy as np
 from scipy.stats import entropy
 import time
 import matplotlib.pyplot as plt
 
-# -------------------------------------------------------------------------
-# ROOT DIR & import
-# -------------------------------------------------------------------------
-ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-if ROOT_DIR not in sys.path:
-    sys.path.append(ROOT_DIR)
-
-# Sampler
-from samplers.ars.ars import ARS
-from samplers.its.its import PiecewiseITS
-from samplers.its.strategies.linear_search import PiecewiseLinearCDFLinearSearch
-from samplers.its.strategies.alias_method import PiecewiseLinearCDFAlias
-from samplers.its.strategies.equiprob import PiecewiseEquiprobCDF
+# Samplers
+from samplers.its_linear import ITSLinear
+from samplers.its_alias import ITSAlias
+from samplers.its_equiprob import ITSEquiprob
 from performance_benchmark import build_cdf_grid
-
 
 # Distribuzioni / utils
 from utils.distributions_utils import (
@@ -127,16 +115,14 @@ def benchmark_accuracy_its(dist_name, strategy_tag, N_batch_list, n_pieces_list,
             if strategy_tag in ("linear", "alias"):
                 xs, cdf = build_cdf_grid(dist_name, n_pieces, params)
             if strategy_tag == "linear":
-                strategy = PiecewiseLinearCDFLinearSearch(xs, cdf)
+                sampler = ITSLinear(xs,cdf)
             else:
-                strategy = PiecewiseLinearCDFAlias(xs, cdf)
+                sampler = ITSAlias(xs, cdf)
         elif strategy_tag == "equiprob":
             xs = kumaraswamy_equiprobable_points(params["a"], params["b"], n_points=n_pieces)
-            strategy = PiecewiseEquiprobCDF(xs)
+            sampler = ITSEquiprob(xs)
         else:
             raise ValueError(f"Strategy non riconosciuta: {strategy_tag}")
-
-        sampler = PiecewiseITS(strategy)
 
         for N in N_batch_list:
             print(f"Generazione batch N={N} ... ", end="")
@@ -217,8 +203,8 @@ def plot_dkw_bands(cdf_data, title="Bande DKW", save_path=None):
 # -------------------------------------------------------------------------
 
 def main():
-    N_batch_list = [10**6]
-    n_pieces_list = [10,100, 500, 1000]
+    N_batch_list = [100, 1000, 10000, 100000, 1000000]
+    n_pieces_list = [10, 100, 500, 1000]
     ns_list = [20, 50, 100]
 
     dists = {
