@@ -5,14 +5,14 @@ from matplotlib import pyplot as plt
 class ARS():
     tag = "ARS"
 
-    def __init__(self, f, fprima, xi=[-4,1,4], lb=-np.inf, ub=np.inf, use_lower=False, ns=50, **fargs):        
+    def __init__(self, f, fprima, xi=[-4,1,4], lb=-np.inf, ub=np.inf, ns=50, **fargs):        
         self.lb = lb
         self.ub = ub
         self.f = f
         self.fprima = fprima
         self.fargs = fargs
         
-        self.ns = 50
+        self.ns = ns
         self.x = np.array(xi)
         self.h = self.f(self.x, **self.fargs)
         self.hprime = self.fprima(self.x, **self.fargs)

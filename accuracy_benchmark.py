@@ -1,4 +1,5 @@
 import numpy as np
+import csv
 from scipy.stats import entropy
 import time
 import matplotlib.pyplot as plt
@@ -203,14 +204,14 @@ def plot_dkw_bands(cdf_data, title="Bande DKW", save_path=None):
 # -------------------------------------------------------------------------
 
 def main():
-    N_batch_list = [100, 1000, 10000, 100000, 1000000]
-    n_pieces_list = [10, 100, 500, 1000]
-    ns_list = [20, 50, 100]
+    N_batch_list = [100, 1000, 10000, 100000]
+    n_pieces_list = [10, 100, 500]
+    ns_list = [3,10,20,50]
 
     dists = {
         "gaussian": {"mu": 0.0, "sigma": 1.0},
-        "gamma": {"shape": 2.0, "scale": 1.0},
-        "beta": {"a": 2.0, "b": 5.0},
+        #"gamma": {"shape": 2.0, "scale": 1.0},
+        "beta": {"a": 2.0, "b": 100.0},
         "kumaraswamy": {"a": 3.0, "b": 3.0},
     }
 
@@ -232,16 +233,30 @@ def main():
     for dist, params in dists.items():
         all_results.extend(benchmark_accuracy_ars(dist, N_batch_list, ns_list, params))
 
-    # Stampa CSV
-    print("\n=== RISULTATI CSV ===")
-    print("method,dist,N,n_pieces,ns,js_div,sup_cdf_err,dkw_eps,dkw_ok")
-    for r in all_results:
-        print(
-            f"{r['method']},{r['dist']},{r['N']},"
-            f"{r.get('n_pieces','')},{r.get('ns','')},"
-            f"{r['js_divergence']:.6f},"
-            f"{r['sup_cdf_error']:.6f},{r['dkw_epsilon']:.6f},{r['dkw_covered']}"
-        )
+    # Scrivi su CSV
+    output_file = "accuracy_results.csv"
+    with open(output_file, mode="w", newline="") as f:
+        writer = csv.writer(f)
+        # intestazioni
+        writer.writerow([
+            "method", "dist", "N", "n_pieces", "ns",
+            "js_div", "sup_cdf_err", "dkw_eps", "dkw_ok"
+        ])
+        # dati
+        for r in all_results:
+            writer.writerow([
+                r["method"],
+                r["dist"],
+                r["N"],
+                r.get("n_pieces", ""),
+                r.get("ns", ""),
+                f"{r['js_divergence']:.6f}",
+                f"{r['sup_cdf_error']:.6f}",
+                f"{r['dkw_epsilon']:.6f}",
+                r['dkw_covered']
+            ])
+
+    print(f"\nRisultati dettagliati salvati in '{output_file}'")
 
 if __name__ == "__main__":
     main()
